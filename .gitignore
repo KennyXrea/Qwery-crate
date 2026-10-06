@@ -1,0 +1,28 @@
+# dependencies & build output
+node_modules
+dist
+dist-ssr
+coverage
+*.tsbuildinfo
+
+# env files: real values never go in git (only the example with placeholders)
+.env*
+!.env.example
+*.local
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# logs
+*.log
+npm-debug.log*
+
+# reference screenshots (inspiration only, not ours to publish)
+docs/reference/
+
+# Supabase CLI local state
+supabase/.temp
+supabase/.branches
