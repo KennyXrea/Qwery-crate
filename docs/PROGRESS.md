@@ -30,8 +30,8 @@
 | Step | What | Status |
 |---|---|---|
 | A | GitHub repo | Exists as `KennyXrea/Qwery-crate`, but it is **public** — plan says private. Make it private before Phase 7. |
-| B | Supabase account + project `qwerty-crate` | Not started — needed before Phase 2 |
-| C | Copy Project URL + publishable key + project ref into `.env.local` | Not started — needed before Phase 2 |
+| B | Supabase account + project `qwerty-crate` | Done (2026-10-07). Database password saved by the owner. |
+| C | Copy Project URL + publishable key + project ref into `.env.local` | Done (2026-10-07). Format checked and key accepted by Supabase. |
 | D | Netlify account | Not started — can wait until Phase 7 |
 
 **Known issues:** none.
@@ -90,4 +90,4 @@ TanStack Query 5.104 · Supabase CLI 2.120
 **Known issues**
 - `npm run check:rls` points at `scripts/check-rls.ts`, which is written in Phase 2 (step 2.7).
 - `npm run db:types` needs `.env.local` with `SUPABASE_PROJECT_REF` and a one-time `npx supabase login`.
-- Manual steps B and C (Supabase project + `.env.local`) are still open; they're needed before Phase 2.
+- Manual steps B and C (Supabase project + `.env.local`) are done (2026-10-07).
