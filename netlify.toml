@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Node 24 = the current LTS, same as .nvmrc (package.json needs >= 22.12; the build prompt's
+  # example said "22", which would also work).
+  NODE_VERSION = "24"
+
+# Single-page app fallback: deep links like /level/some-slug load index.html
+# instead of 404-ing on refresh. (Security headers are added in Phase 6.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
