@@ -21,6 +21,11 @@ const UiKitPage = import.meta.env.DEV
   ? lazy(() => import('./dev/UiKitPage').then((m) => ({ default: m.UiKitPage })))
   : null
 
+// TEMPORARY (remove at the end of Phase 4): live JSON from the data hooks. Same DEV-only trick.
+const DevDataPage = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevDataPage').then((m) => ({ default: m.DevDataPage })))
+  : null
+
 export function AdminLoginRoute() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -42,6 +47,15 @@ export function UiKitRoute() {
   return (
     <Suspense fallback={<PageLoader />}>
       <UiKitPage />
+    </Suspense>
+  )
+}
+
+export function DevDataRoute() {
+  if (!DevDataPage) return <NotFoundPage />
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <DevDataPage />
     </Suspense>
   )
 }

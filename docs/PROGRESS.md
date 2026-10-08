@@ -6,10 +6,10 @@
 ## Current status
 
 - **Stage:** 1 (Phases 0–5) — in progress
-- **Last completed phase:** 2
-- **Next step:** Phase 3 (data layer). The pure utilities in `src/lib` (points, format, url, youtube,
-  media, slug, search, queryClient) and their tests are already written; still to do: `src/lib/supabase.ts`,
-  `src/api/*`, `src/hooks/*`, the temporary `/dev/data` page.
+- **Last completed phase:** 3
+- **Next step:** Phase 4 (public site). Manual steps for Phase 5.1 (sign-ups off, admin user created,
+  added to `public.admins`, Site URL + Redirect URL `http://localhost:5173`) are **already done**
+  (2026-10-08). Owner decision: admin login is email + password only — no Discord, no member accounts.
 
 ## Phase 0 — Prerequisites, accounts and repo ✅
 
@@ -152,4 +152,31 @@ password (the CLI 2.120 uses a temporary login role).
   levels; run `seed_cleanup.sql` in the SQL Editor when the sample data should go.
 - The PGlite harness lived in the session scratchpad and is not in the repo (it would need
   `@electric-sql/pglite` as a dev dependency — ask the owner before adding it).
+
+## Phase 3 — Data layer + utilities + unit tests ✅
+
+**Built**
+- `src/lib`: `points.ts` (same formula/rounding as SQL; section ranges), `format.ts` (dates — date-only
+  strings keep their calendar day in every time zone —, points, numbers, averages, durations, difficulty
+  labels), `url.ts` (`safeExternalUrl` for every user link), `youtube.ts` (ID parsing, nocookie embed,
+  thumbnails), `media.ts` (public Storage URLs, level thumbnail fallback chain), `slug.ts`, `search.ts`
+  (`normalizeSearch`, `escapeLike` for PostgREST `.ilike`), `queryClient.ts`, `supabase.ts` (typed client).
+- `src/types/models.ts`: `Level`, `Player`, `Completion`, `RecentChange` (union by `kind`),
+  `PositionHistoryEntry`, `SiteSettings`, `SearchResult`, … with correct nullability; `GdDifficulty` is
+  compile-time tied to the generated enum.
+- `src/api`: `errors.ts` (`ApiError` + `toApiError`: friendly messages for 23505/23503/23514/42501/RLS/
+  JWT expiry/network/abort, `isSessionExpiredError`), `settings`, `levels` (filters, 6 sorts with stable
+  tie-breakers, paging incl. past-the-end pages), `players`, `records`, `recent`, `stats`, `search`.
+  Every function takes `{ signal }` and throws only `ApiError`. Unknown filter values are ignored.
+- `src/hooks`: `queryKeys.ts` + one hook file per area, `usePointsSettings`.
+- Temporary `/dev/data` page (DEV only, not in the production build) — remove at the end of Phase 4.
+
+**Verification:** typecheck, lint, `npm test` (28 files, **785 tests**), build, prettier all pass.
+Adversarial review fixed 4 bugs (blank `player=` emptied the list, unknown difficulty caused a
+permanent error, `toApiError` could throw, wrapped network errors weren't recognised). A read-only live
+smoke test (scratchpad only) ran every API function against the real database: 31/31 pass; points match.
+
+**Known issues / notes for Phase 4**
+- List pages keep previous rows while new ones load (`isPlaceholderData`); use `isPending` for skeletons.
+- Level records / player records / history are unpaged (fine below 1000 rows).
 

@@ -2,7 +2,7 @@ import type { RouteObject } from 'react-router'
 import { RootLayout } from './components/layout/RootLayout'
 import { AboutPage } from './pages/AboutPage'
 import { HomePage } from './pages/HomePage'
-import { AdminLoginRoute, AdminPlaceholderRoute, UiKitRoute } from './pages/lazy'
+import { AdminLoginRoute, AdminPlaceholderRoute, DevDataRoute, UiKitRoute } from './pages/lazy'
 import { LevelPage } from './pages/LevelPage'
 import { ListPage } from './pages/ListPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -14,7 +14,11 @@ import { StatsPage } from './pages/StatsPage'
 
 /** Developer-only pages. `import.meta.env.DEV` is `false` in production builds, so they disappear. */
 const devRoutes: RouteObject[] = import.meta.env.DEV
-  ? [{ path: 'dev/ui', element: <UiKitRoute /> }]
+  ? [
+      { path: 'dev/ui', element: <UiKitRoute /> },
+      // TEMPORARY: live JSON from the data hooks. Remove at the end of Phase 4.
+      { path: 'dev/data', element: <DevDataRoute /> },
+    ]
   : []
 
 export const routes: RouteObject[] = [
