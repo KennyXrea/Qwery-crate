@@ -37,6 +37,13 @@ docs/                   PLAN.md, BUILD_PROMPT.md, PROGRESS.md (reference/ screen
 - **Never the secret key.** Only the publishable/anon key is used, via `VITE_SUPABASE_PUBLISHABLE_KEY`.
   The secret / service_role key never goes in code, `VITE_` variables, Netlify or git. `.env.local` is git-ignored.
 - Security lives in Postgres RLS; frontend route guards are only for the user experience.
+- **Migrations** (`npx supabase migration new <name>`, never edit an applied one): new table → enable RLS,
+  policies, `revoke all … from anon, authenticated`, then grant only what's needed; new function →
+  `set search_path = ''`, full names, `revoke execute … from public, anon, authenticated`, then grant.
+  Auto mode can't push to the real database: the owner runs `! npx supabase db push`, then `npm run db:types`
+  and `npm run check:rls`. Ranking changes only via `admin_create_level` / `admin_move_level` /
+  `admin_delete_level` (a trigger refuses gaps). The points formula lives in the SQL functions, both
+  views and `src/lib/points.ts` — change them together.
 - Import zod only from `src/lib/zod.ts` (it turns off zod's `eval()` probe for the CSP; ESLint enforces it).
 - No `any`, no `dangerouslySetInnerHTML`, no `enum`s. Named exports. Files that export components export only
   components (React Fast Refresh). Colors only from the theme tokens. Tap targets ≥ 40px.

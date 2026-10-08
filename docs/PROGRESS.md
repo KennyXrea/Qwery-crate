@@ -6,9 +6,10 @@
 ## Current status
 
 - **Stage:** 1 (Phases 0–5) — in progress
-- **Last completed phase:** 1
-- **Next step:** Phase 2 (database). First check that `.env.local` exists with real values (not the
-  placeholders from `.env.example`). If it doesn't, stop and walk the owner through manual steps B and C.
+- **Last completed phase:** 2
+- **Next step:** Phase 3 (data layer). The pure utilities in `src/lib` (points, format, url, youtube,
+  media, slug, search, queryClient) and their tests are already written; still to do: `src/lib/supabase.ts`,
+  `src/api/*`, `src/hooks/*`, the temporary `/dev/data` page.
 
 ## Phase 0 — Prerequisites, accounts and repo ✅
 
@@ -88,6 +89,67 @@ TanStack Query 5.104 · Supabase CLI 2.120
   forbids it); always import zod from there.
 
 **Known issues**
-- `npm run check:rls` points at `scripts/check-rls.ts`, which is written in Phase 2 (step 2.7).
 - `npm run db:types` needs `.env.local` with `SUPABASE_PROJECT_REF` and a one-time `npx supabase login`.
 - Manual steps B and C (Supabase project + `.env.local`) are done (2026-10-07).
+
+## Phase 2 — Database: schema, RLS, functions, views, storage, seed ✅
+
+**Built** (`supabase/`, created with `npx supabase init`; project linked, region us-east-1, Postgres 17)
+- `migrations/20261007140000_schema.sql`: enum `gd_difficulty`; tables `site_settings` (singleton +
+  default row), `levels`, `players`, `records`, `level_position_history`, `admins`; all checks, the
+  deferrable unique `levels.position`, `lower(players.name)` unique index, indexes, `set_updated_at()`.
+- `…140100_rls.sql`: `is_admin()`, RLS on every table, one policy per action (public read; admin
+  insert/update/delete), `admins` readable only as your own row, revoke-all-then-grant privileges.
+- `…140200_functions_views.sql`: `level_section()`, `level_points()`, `records_view`, `levels_view`,
+  `players_view`, `recent_changes_view` (all `security_invoker`), `search_site()`,
+  `admin_create_level()`, `admin_move_level()`, `admin_delete_level()`, gap-closing delete trigger.
+- `…140300_storage.sql`: public bucket `media` (2 MB, png/jpeg/webp) with admin-only policies.
+- `seed.sql` (12 "Sample Level N", 6 "Player …", 26 records, 15 history rows, all fake) and
+  `seed_cleanup.sql` (deletes exactly those rows by slug; real data stays).
+- `scripts/check-rls.ts` (`npm run check:rls`), `src/types/database.ts` (generated).
+
+**How it was applied:** the owner ran `npx supabase login` (Terminal) and
+`npx supabase db push --include-seed --yes` (Claude Code's auto mode refuses to push to the real
+database itself; the owner runs pushes with `! <command>`). `npx supabase link` needed no database
+password (the CLI 2.120 uses a temporary login role).
+
+**Verification**
+- Before applying: a PGlite (Postgres-in-WASM) harness in the session scratchpad with Supabase stubs
+  ran 163 behavioural checks (RLS as anon / non-admin / admin, ranking create/move/delete incl.
+  multi-row deletes, points, views, search escaping, storage) — all pass; 29/29 injected SQL
+  mutations caught. Four adversarial reviews (security, ranking, spec, derived data); fixes applied.
+- `npm run check:rls`: 40/40 PASS + 1 NOTE (storage listing can only be proven once images exist).
+- Live points check: `levels_view` points and the `level_points` RPC match `src/lib/points.ts`.
+- Security Advisor (`npx supabase db advisors --linked --type all`): **no security issues**; only 3
+  INFO "unused index" notes (new database, no traffic yet).
+- `npm run typecheck`, `lint`, `test` (511 tests), `build`, `prettier --check` all pass.
+
+**Deviations from BUILD_PROMPT / PLAN (on purpose)**
+- `is_admin()` is SECURITY INVOKER and executable only by `authenticated` (not DEFINER/anon): the
+  Advisor warns (lints 0028/0029) about DEFINER functions callable by API roles, and it isn't needed
+  because a user can read their own `admins` row. Visitors calling `rpc('is_admin')` get 42501, so the
+  frontend only asks when logged in.
+- Storage has **no public SELECT policy**: public-bucket files are served by URL without one, and a
+  public SELECT policy would let anyone list every file. Admins have SELECT (needed to replace/delete).
+- Extra safety: a deferred constraint trigger refuses gaps in the ranking (positions are always
+  exactly 1..n), so position changes must go through `admin_create_level` / `admin_move_level` /
+  `admin_delete_level` (new; takes the ranking lock before deleting, avoiding deadlocks). Admin
+  PATCHes must not send `position`.
+- `level_position_history.seq` (identity) orders rows written in one transaction: timelines order by
+  `changed_at desc, seq desc`.
+- `difficulty_rating` is `numeric(5,2)` (PLAN said (4,2), which can't store the allowed maximum 100).
+- `site_settings` list sizes are capped at 10000; `search_site` ignores queries over 100 characters.
+- The views inline the points formula (much faster than calling the function per row); it now lives
+  in `level_section`, `level_points`, `records_view`, `levels_view` and `src/lib/points.ts` — change
+  them together. With defaults #50 = **20.25** (PLAN's "≈ 20" is right; 20.27 was a typo).
+- `levels_view` also has `first_victor_video_url` (fallback thumbnail) and `first_victory_date`;
+  `recent_changes_view` also has `id`, `event_date`, `player_id`, `video_url`. Order it by
+  `event_date desc, happened_at desc, kind, id`.
+- First victor = earliest `date_beaten` (unknown dates last), then entry time, then id.
+
+**Known issues**
+- `seed.sql` is only for an empty list (it inserts positions 1–12). Don't re-run it after adding real
+  levels; run `seed_cleanup.sql` in the SQL Editor when the sample data should go.
+- The PGlite harness lived in the session scratchpad and is not in the repo (it would need
+  `@electric-sql/pglite` as a dev dependency — ask the owner before adding it).
+
