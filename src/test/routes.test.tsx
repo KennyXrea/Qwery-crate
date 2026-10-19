@@ -1,58 +1,29 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { createMemoryRouter, data } from 'react-router'
-import type { RouteObject } from 'react-router'
-// The same RouterProvider the app uses (App.tsx).
-import { RouterProvider } from 'react-router/dom'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../components/ui/ToastProvider'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { data } from 'react-router'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatPageTitle } from '../hooks/usePageTitle'
 import { nameFromSlug } from '../pages/page-utils'
 import { RouteErrorPage } from '../pages/RouteErrorPage'
-import { routes } from '../routes'
+import { mockApiDefaults } from './api-mocks'
+import { renderApp } from './render'
+
+// Every page renders through the real route table. The API answers from the fake dataset in
+// api-mocks.ts (Sample Level 1–6, Player Alpha/Beta/Gamma), so these checks hold whether a page
+// is still a placeholder or already shows real data — and no test ever touches the network.
 
 const NAV_ORDER = ['List', 'Players', 'Stats', 'Recent changes', 'About']
 /** Lazily loaded pages need a moment for their code to be imported. */
 const LAZY_TIMEOUT = { timeout: 5000 }
 
-beforeAll(() => {
-  // jsdom doesn't implement scrolling; ScrollRestoration calls these on navigation.
-  Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true, configurable: true })
-  if (!Element.prototype.scrollIntoView) {
-    Element.prototype.scrollIntoView = vi.fn()
-  }
-  if (!window.matchMedia) {
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      writable: true,
-      value: (query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(() => false),
-      }),
-    })
-  }
+beforeEach(() => {
+  mockApiDefaults()
 })
 
 afterEach(() => {
-  cleanup()
   document.title = ''
+  // Undo the console spies of the error-page tests.
   vi.restoreAllMocks()
 })
-
-function renderRoutes(path: string, routeTable: RouteObject[] = routes) {
-  const router = createMemoryRouter(routeTable, { initialEntries: [path] })
-  render(
-    <ToastProvider>
-      <RouterProvider router={router} />
-    </ToastProvider>,
-  )
-  return router
-}
 
 function mainNav() {
   return within(screen.getByRole('banner')).getAllByRole('navigation', { name: 'Main' })[0]
@@ -60,7 +31,7 @@ function mainNav() {
 
 describe('public routes', () => {
   it('shows the home page at /', async () => {
-    renderRoutes('/')
+    renderApp('/')
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Qwerty Crate' }),
@@ -70,7 +41,7 @@ describe('public routes', () => {
   })
 
   it('lists the header navigation in the agreed order', async () => {
-    renderRoutes('/')
+    renderApp('/')
     await screen.findByRole('banner')
 
     const labels = within(mainNav())
@@ -79,15 +50,15 @@ describe('public routes', () => {
     expect(labels).toEqual(NAV_ORDER)
   })
 
-  it('shows the list page with placeholder level cards and a sidebar', async () => {
-    renderRoutes('/list')
+  it('shows the list page with level cards and a sidebar', async () => {
+    renderApp('/list')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'The List' })).toBeInTheDocument()
-    for (const n of [1, 2, 3, 4]) {
-      expect(screen.getByRole('link', { name: `Sample Level ${n}` })).toHaveAttribute(
-        'href',
-        `/level/sample-level-${n}`,
-      )
+    // The Main section (#1–3 in the fake settings). A level can be linked more than once
+    // (card + sidebar boxes), so look at every link with that name.
+    for (const n of [1, 2, 3]) {
+      const links = await screen.findAllByRole('link', { name: `Sample Level ${n}` })
+      expect(links[0]).toHaveAttribute('href', `/level/sample-level-${n}`)
     }
     expect(screen.getByRole('complementary')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'How points work' })).toBeInTheDocument()
@@ -95,25 +66,28 @@ describe('public routes', () => {
   })
 
   it('navigates from the home page to the list with a link click', async () => {
-    renderRoutes('/')
+    renderApp('/')
 
     fireEvent.click(await screen.findByRole('link', { name: /view the list/i }))
     expect(await screen.findByRole('heading', { level: 1, name: 'The List' })).toBeInTheDocument()
   })
 
-  it('shows the slug on a level page', async () => {
-    renderRoutes('/level/sample-level')
+  it('shows a level page', async () => {
+    renderApp('/level/sample-level-1')
 
-    expect(await screen.findByText('sample-level')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Sample Level' })).toBeInTheDocument()
-    await waitFor(() => expect(document.title).toBe('Sample Level — Qwerty Crate'))
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sample Level 1' }),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toBe('Sample Level 1 — Qwerty Crate'))
   })
 
-  it('shows the slug on a player page', async () => {
-    renderRoutes('/player/player-alpha')
+  it('shows a player page', async () => {
+    renderApp('/player/player-alpha')
 
-    expect(await screen.findByText('player-alpha')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Player Alpha' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Player Alpha' }),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toBe('Player Alpha — Qwerty Crate'))
   })
 
   it.each([
@@ -122,14 +96,14 @@ describe('public routes', () => {
     ['/recent', 'Recent changes', 'Recent changes — Qwerty Crate'],
     ['/about', 'About Qwerty Crate', 'About — Qwerty Crate'],
   ])('renders %s', async (path, heading, title) => {
-    renderRoutes(path)
+    renderApp(path)
 
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
     await waitFor(() => expect(document.title).toBe(title))
   })
 
   it('states the "not affiliated" disclaimer on the about page', async () => {
-    renderRoutes('/about')
+    renderApp('/about')
 
     await screen.findByRole('heading', { level: 1, name: 'About Qwerty Crate' })
     const main = screen.getByRole('main')
@@ -141,7 +115,7 @@ describe('public routes', () => {
 
 describe('not found', () => {
   it('shows a finished 404 page for unknown addresses', async () => {
-    renderRoutes('/does-not-exist')
+    renderApp('/does-not-exist')
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Page not found' }),
@@ -153,7 +127,7 @@ describe('not found', () => {
   })
 
   it('keeps the site header on the 404 page', async () => {
-    renderRoutes('/level')
+    renderApp('/level')
 
     await screen.findByRole('heading', { level: 1, name: 'Page not found' })
     expect(mainNav()).toBeInTheDocument()
@@ -162,7 +136,7 @@ describe('not found', () => {
 
 describe('lazy-loaded routes', () => {
   it('loads the admin login page inside the site layout', async () => {
-    renderRoutes('/admin/login')
+    renderApp('/admin/login')
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Admin login' }, LAZY_TIMEOUT),
@@ -172,7 +146,7 @@ describe('lazy-loaded routes', () => {
   })
 
   it.each(['/admin', '/admin/levels'])('shows the admin placeholder at %s', async (path) => {
-    renderRoutes(path)
+    renderApp(path)
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Admin dashboard' }, LAZY_TIMEOUT),
@@ -183,7 +157,7 @@ describe('lazy-loaded routes', () => {
   })
 
   it('serves the UI kit while developing', async () => {
-    renderRoutes('/dev/ui')
+    renderApp('/dev/ui')
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'UI kit' }, LAZY_TIMEOUT),
@@ -202,7 +176,9 @@ describe('RouteErrorPage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    renderRoutes('/', [{ path: '/', element: <Boom />, errorElement: <RouteErrorPage /> }])
+    renderApp('/', {
+      routeTable: [{ path: '/', element: <Boom />, errorElement: <RouteErrorPage /> }],
+    })
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Something went wrong' }),
@@ -216,17 +192,19 @@ describe('RouteErrorPage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    renderRoutes('/missing', [
-      {
-        path: '/missing',
-        loader: () => {
-          throw data('No such level', { status: 404 })
+    renderApp('/missing', {
+      routeTable: [
+        {
+          path: '/missing',
+          loader: () => {
+            throw data('No such level', { status: 404 })
+          },
+          hydrateFallbackElement: <p>Loading…</p>,
+          element: <p>never shown</p>,
+          errorElement: <RouteErrorPage />,
         },
-        hydrateFallbackElement: <p>Loading…</p>,
-        element: <p>never shown</p>,
-        errorElement: <RouteErrorPage />,
-      },
-    ])
+      ],
+    })
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Page not found' }),

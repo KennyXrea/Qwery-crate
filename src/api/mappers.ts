@@ -13,6 +13,7 @@ import type {
   PositionChangeReason,
   PositionHistoryEntry,
   RecentChange,
+  RecentRecordChange,
   SearchResult,
 } from '../types/models'
 import { ApiError, UNEXPECTED_DATA_CODE, UNEXPECTED_DATA_MESSAGE } from './errors'
@@ -216,6 +217,13 @@ export function toRecentChange(row: RecentChangesViewRow): RecentChange {
     default:
       throw unexpectedData(source, 'kind', base.kind)
   }
+}
+
+/** A recent_changes_view row that must be a completion (kind 'record'). */
+export function toRecentRecordChange(row: RecentChangesViewRow): RecentRecordChange {
+  const change = toRecentChange(row)
+  if (change.kind !== 'record') throw unexpectedData('recent_changes_view', 'kind', change.kind)
+  return change
 }
 
 // ── level_position_history ────────────────────────────────────────────────────────────────────

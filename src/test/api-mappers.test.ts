@@ -6,6 +6,7 @@ import {
   toPlayer,
   toPositionHistoryEntry,
   toRecentChange,
+  toRecentRecordChange,
   toSearchResult,
 } from '../api/mappers'
 import { DIFFICULTIES, type GdDifficulty as FormatGdDifficulty } from '../lib/format'
@@ -177,6 +178,18 @@ describe('toRecentChange', () => {
     expectUnexpectedData(() => toRecentChange(recentRecordRow({ kind: null })), /kind/)
     expectUnexpectedData(() => toRecentChange(recentRecordRow({ level_slug: null })), /level_slug/)
     expectUnexpectedData(() => toRecentChange(recentRecordRow({ player_id: null })), /player_id/)
+  })
+})
+
+describe('toRecentRecordChange', () => {
+  it('maps a completion row', () => {
+    const change = toRecentRecordChange(recentRecordRow({ attempts: null }))
+    expectTypeOf(change.player_slug).toEqualTypeOf<string>()
+    expect(change).toMatchObject({ kind: 'record', player_slug: 'player-alpha', attempts: null })
+  })
+
+  it('throws for rows that are not completions', () => {
+    expectUnexpectedData(() => toRecentRecordChange(recentLevelRow()), /kind/)
   })
 })
 

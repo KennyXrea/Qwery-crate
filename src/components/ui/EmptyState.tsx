@@ -11,6 +11,8 @@ type EmptyStateProps = {
   action?: ReactNode
   /** Heading element for the title, so it fits the page outline. Defaults to `h2`. */
   titleAs?: 'h2' | 'h3' | 'p'
+  /** `sm` is a compact version for small boxes (sidebar cards, one section of a page). */
+  size?: 'md' | 'sm'
   className?: string
 }
 
@@ -21,26 +23,44 @@ export function EmptyState({
   icon,
   action,
   titleAs: Title = 'h2',
+  size = 'md',
   className,
 }: EmptyStateProps) {
+  const small = size === 'sm'
+
   return (
     <div
       className={cn(
-        'rounded-2xl border border-dashed border-border bg-surface/40 px-6 py-10 text-center sm:py-14',
+        'rounded-2xl border border-dashed border-border bg-surface/40 text-center',
+        small ? 'px-4 py-6' : 'px-6 py-10 sm:py-14',
         className,
       )}
     >
       <div
         aria-hidden="true"
-        className="mx-auto flex size-12 items-center justify-center rounded-full border border-accent/20 bg-accent/10 text-accent [&_svg]:size-6"
+        className={cn(
+          'mx-auto flex items-center justify-center rounded-full border border-accent/20 bg-accent/10 text-accent',
+          small ? 'size-10 [&_svg]:size-5' : 'size-12 [&_svg]:size-6',
+        )}
       >
         {icon ?? <IconInbox />}
       </div>
-      <Title className="mt-4 font-display text-lg font-semibold text-text">{title}</Title>
+      <Title
+        className={cn(
+          'font-display font-semibold text-text',
+          small ? 'mt-3 text-base' : 'mt-4 text-lg',
+        )}
+      >
+        {title}
+      </Title>
       {description ? (
         <div className="mx-auto mt-2 max-w-md text-sm text-muted">{description}</div>
       ) : null}
-      {action ? <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div> : null}
+      {action ? (
+        <div className={cn('flex flex-wrap justify-center gap-3', small ? 'mt-4' : 'mt-6')}>
+          {action}
+        </div>
+      ) : null}
     </div>
   )
 }

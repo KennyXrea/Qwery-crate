@@ -1,14 +1,15 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
+import { mockApiDefaults } from './api-mocks'
 
 // Smoke test of the real app shell exactly as main.tsx renders it: ToastProvider +
 // RouterProvider from 'react-router/dom' + the browser router. It guards against the two
 // react-router entry points loading separate copies of the router in tests (see vite.config.ts).
 
-beforeAll(() => {
-  // jsdom doesn't implement scrolling; ScrollRestoration calls it on navigation.
-  Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true, configurable: true })
+beforeEach(() => {
+  // The API answers from the fake dataset in api-mocks.ts (no network).
+  mockApiDefaults()
 })
 
 describe('App', () => {

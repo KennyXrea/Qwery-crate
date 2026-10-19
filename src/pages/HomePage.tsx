@@ -1,144 +1,168 @@
-import { Link } from 'react-router'
 import { PageShell } from '../components/layout/PageShell'
+import { LevelCard } from '../components/level/LevelCard'
+import { LevelCardSkeleton } from '../components/level/LevelCardSkeleton'
+import { LatestRecordsBox } from '../components/shared/LatestRecordsBox'
+import { RecentChangesBox } from '../components/shared/RecentChangesBox'
+import { TopPlayersBox } from '../components/shared/TopPlayersBox'
+import { ViewAllLink } from '../components/shared/ViewAllLink'
+import { SiteTotals, SiteTotalsSkeleton } from '../components/stats/SiteTotals'
 import { ButtonLink } from '../components/ui/ButtonLink'
-import { Card } from '../components/ui/Card'
-import { STRETCHED_LINK } from '../components/ui/card-link'
-import { IconArrowRight, IconInfo } from '../components/ui/icons'
-import { RankNumber } from '../components/ui/RankNumber'
-import { Skeleton } from '../components/ui/Skeleton'
-import { usePageTitle } from '../hooks/usePageTitle'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorState } from '../components/ui/ErrorState'
+import { IconArrowRight } from '../components/ui/icons'
+import { useLevels } from '../hooks/useLevels'
+import { SITE_NAME, usePageTitle } from '../hooks/usePageTitle'
+import { useSettings } from '../hooks/useSettings'
+import { useSiteStats } from '../hooks/useSiteStats'
 
-const STAT_LABELS = ['Levels', 'Players', 'Records', 'Total attempts'] as const
+/** How many levels the "Top of the list" section shows. */
+const TOP_LEVELS = 5
 
-const EXPLORE_LINKS = [
-  {
-    to: '/list',
-    title: 'The List',
-    description: "Every level we've beaten, ranked from hardest down.",
-  },
-  {
-    to: '/players',
-    title: 'Players',
-    description: 'Who has beaten what, and who leads on points.',
-  },
-  {
-    to: '/recent',
-    title: 'Recent changes',
-    description: 'New completions, new levels and ranking moves.',
-  },
-] as const
+/** Main content | 20rem side column on large screens, like the list page's sidebar. */
+const TWO_COLUMNS = 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8'
+
+/** Totals: 2 per row on phones, 4 in a strip on tablets, 2 × 2 beside the hero on desktops. */
+const TOTALS_GRID = 'md:grid-cols-4 lg:grid-cols-2'
 
 export function HomePage() {
   usePageTitle()
 
   return (
     <PageShell>
-      <section
-        aria-labelledby="home-title"
-        className="grid animate-fade-in items-center gap-10 pt-4 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16"
-      >
-        <div className="min-w-0">
-          <p className="font-mono text-xs font-medium tracking-widest text-accent uppercase">
-            Geometry Dash · Friend group list
-          </p>
-          <h1
-            id="home-title"
-            className="mt-3 text-4xl leading-tight font-bold text-text sm:text-6xl"
-          >
-            Qwerty <span className="text-accent">Crate</span>
-          </h1>
-          <p className="mt-4 max-w-xl text-lg text-muted sm:text-xl">
-            Our friend group's Geometry Dash list — ranked by us, beaten by us.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink
-              to="/list"
-              size="lg"
-              rightIcon={<IconArrowRight />}
-              className="w-full sm:w-auto"
-            >
-              View the list
-            </ButtonLink>
-            <ButtonLink to="/players" size="lg" variant="secondary" className="w-full sm:w-auto">
-              Players
-            </ButtonLink>
-          </div>
+      <div className={`${TWO_COLUMNS} items-center pt-2 sm:pt-6`}>
+        <Hero />
+        <TotalsStrip />
+      </div>
+
+      <div className={`${TWO_COLUMNS} mt-12 items-start sm:mt-16`}>
+        <TopLevels />
+        <div className="space-y-4">
+          <TopPlayersBox limit={5} />
+          <LatestRecordsBox limit={5} title="Recent completions" />
         </div>
+      </div>
 
-        <PodiumPreview />
-      </section>
-
-      <section aria-labelledby="home-stats-title" className="mt-12 sm:mt-16">
-        <h2 id="home-stats-title" className="sr-only">
-          Site totals
-        </h2>
-        <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {STAT_LABELS.map((label) => (
-            <Card key={label} padding="sm" className="sm:p-5">
-              <dt className="text-sm text-muted">{label}</dt>
-              <dd className="mt-2 font-mono text-3xl font-semibold text-text tabular-nums">
-                <span aria-hidden="true">—</span>
-                <span className="sr-only">Not available yet</span>
-              </dd>
-            </Card>
-          ))}
-        </dl>
-        <p className="mt-4 flex items-start gap-2 text-sm text-muted">
-          <IconInfo className="mt-0.5 size-4 shrink-0 text-accent" />
-          <span>Live numbers appear here once the database is connected.</span>
-        </p>
-      </section>
-
-      <section aria-labelledby="home-explore-title" className="mt-12 sm:mt-16">
-        <h2 id="home-explore-title" className="text-xl font-semibold text-text sm:text-2xl">
-          Explore
-        </h2>
-        <ul className="mt-4 grid gap-3 sm:gap-4 md:grid-cols-3">
-          {EXPLORE_LINKS.map((item) => (
-            <Card as="li" key={item.to} interactive className="group relative">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold text-text">
-                  <Link to={item.to} className={STRETCHED_LINK}>
-                    {item.title}
-                  </Link>
-                </h3>
-                <IconArrowRight className="mt-1 shrink-0 text-muted transition-colors group-hover:text-accent" />
-              </div>
-              <p className="mt-2 text-sm text-muted">{item.description}</p>
-            </Card>
-          ))}
-        </ul>
-      </section>
+      <div className="mt-6 lg:mt-8">
+        <RecentChangesBox limit={5} />
+      </div>
     </PageShell>
   )
 }
 
-/** Decorative preview of how the top of the list will look (desktop only). */
-function PodiumPreview() {
+function Hero() {
+  const { data: settings } = useSettings()
+  // Until the settings arrive (or if they can't), the built-in name is shown.
+  const name = settings?.site_name.trim() || SITE_NAME
+  const lastSpace = name.lastIndexOf(' ')
+  const head = lastSpace > 0 ? name.slice(0, lastSpace) : ''
+  const tail = lastSpace > 0 ? name.slice(lastSpace + 1) : name
+
   return (
-    <div aria-hidden="true" className="hidden lg:block">
-      <Card padding="none" className="overflow-hidden shadow-lg shadow-black/20">
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <span className="font-mono text-xs tracking-widest text-muted uppercase">
-            Top of the list
-          </span>
-          <span className="size-2 rounded-full bg-accent" />
-        </div>
-        <ol className="divide-y divide-border">
-          {[1, 2, 3].map((rank) => (
-            <li key={rank} className="flex items-center gap-4 px-5 py-4">
-              <span className="w-10 shrink-0">
-                <RankNumber rank={rank} />
-              </span>
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-4/5" />
-                <Skeleton className="h-2.5 w-1/2" />
-              </div>
-              <Skeleton className="h-6 w-12" rounded="full" />
-            </li>
+    <section aria-labelledby="home-title" className="min-w-0 animate-fade-in">
+      <p className="font-mono text-xs font-medium tracking-widest text-accent uppercase">
+        Geometry Dash · Friend group list
+      </p>
+      <h1
+        id="home-title"
+        className="mt-3 text-4xl leading-tight font-bold wrap-break-word text-text sm:text-6xl"
+      >
+        {head ? `${head} ` : null}
+        <span className={head ? 'text-accent' : undefined}>{tail}</span>
+      </h1>
+      <p className="mt-4 max-w-xl text-lg text-muted sm:text-xl">
+        Our friend group's Geometry Dash list — ranked by us, beaten by us.
+      </p>
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <ButtonLink
+          to="/list"
+          size="lg"
+          rightIcon={<IconArrowRight />}
+          className="w-full sm:w-auto"
+        >
+          View the list
+        </ButtonLink>
+        <ButtonLink to="/players" size="lg" variant="secondary" className="w-full sm:w-auto">
+          Players
+        </ButtonLink>
+      </div>
+    </section>
+  )
+}
+
+function TotalsStrip() {
+  const { data, isPending, error, refetch, isFetching } = useSiteStats()
+
+  return (
+    <section aria-labelledby="home-totals-title" className="min-w-0">
+      <h2 id="home-totals-title" className="sr-only">
+        Site totals
+      </h2>
+      <div aria-busy={isPending || undefined}>
+        {isPending ? (
+          <SiteTotalsSkeleton columns={2} className={TOTALS_GRID} />
+        ) : data ? (
+          <SiteTotals stats={data} columns={2} className={TOTALS_GRID} />
+        ) : (
+          <ErrorState
+            size="sm"
+            titleAs="h3"
+            title="Couldn't load the totals"
+            message={error?.message}
+            onRetry={() => void refetch()}
+            retrying={isFetching}
+          />
+        )}
+      </div>
+    </section>
+  )
+}
+
+function TopLevels() {
+  const { data, isPending, error, refetch, isFetching } = useLevels({ pageSize: TOP_LEVELS })
+  const levels = data?.rows ?? []
+
+  return (
+    <section aria-labelledby="home-top-title" className="min-w-0">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 id="home-top-title" className="text-xl font-semibold text-text sm:text-2xl">
+          Top of the list
+        </h2>
+        <ViewAllLink to="/list" label="levels" />
+      </div>
+      {isPending ? (
+        <ol aria-busy="true" className="space-y-3">
+          {Array.from({ length: TOP_LEVELS }, (_, i) => (
+            <LevelCardSkeleton key={i} />
           ))}
         </ol>
-      </Card>
-    </div>
+      ) : levels.length > 0 ? (
+        <ol className="space-y-3">
+          {levels.map((level, i) => (
+            <LevelCard
+              key={level.id}
+              level={level}
+              titleAs="h3"
+              thumbnailLoading={i === 0 ? 'eager' : 'lazy'}
+            />
+          ))}
+        </ol>
+      ) : error ? (
+        <ErrorState
+          size="sm"
+          titleAs="h3"
+          title="Couldn't load the top levels"
+          message={error.message}
+          onRetry={() => void refetch()}
+          retrying={isFetching}
+        />
+      ) : (
+        <EmptyState
+          size="sm"
+          titleAs="h3"
+          title="No levels yet"
+          description="The first levels appear here as soon as they're added to the list."
+        />
+      )}
+    </section>
   )
 }

@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { Link } from 'react-router'
 import { PageShell } from '../../components/layout/PageShell'
+import { DifficultyBadge } from '../../components/level/DifficultyBadge'
+import { LevelCard } from '../../components/level/LevelCard'
+import type { LevelCardLevel } from '../../components/level/LevelCard'
+import { LevelCardSkeleton } from '../../components/level/LevelCardSkeleton'
+import { LevelThumbnail } from '../../components/level/LevelThumbnail'
+import { SectionBadge } from '../../components/level/SectionBadge'
+import { VideoEmbed } from '../../components/level/VideoEmbed'
+import { CountryFlag } from '../../components/player/CountryFlag'
+import { PlayerAvatar } from '../../components/player/PlayerAvatar'
+import { PlayerLink } from '../../components/player/PlayerLink'
+import { LatestRecordsBox } from '../../components/shared/LatestRecordsBox'
+import { RecentChangeItem } from '../../components/shared/RecentChangeItem'
+import { RecentChangeItemSkeleton } from '../../components/shared/RecentChangeItemSkeleton'
+import { RecentChangesBox } from '../../components/shared/RecentChangesBox'
+import { StatGrid } from '../../components/shared/StatGrid'
+import { StatGridSkeleton } from '../../components/shared/StatGridSkeleton'
+import { StatTile } from '../../components/shared/StatTile'
+import { TopPlayersBox } from '../../components/shared/TopPlayersBox'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import type { ButtonSize, ButtonVariant } from '../../components/ui/button-styles'
@@ -20,12 +38,18 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClose,
+  IconCopy,
   IconExternal,
   IconHome,
   IconInbox,
   IconInfo,
   IconMenu,
+  IconPlay,
+  IconPlus,
   IconSearch,
+  IconStar,
+  IconTrophy,
+  IconUsers,
 } from '../../components/ui/icons'
 import type { IconProps } from '../../components/ui/icons'
 import { Input } from '../../components/ui/Input'
@@ -38,6 +62,8 @@ import { Spinner } from '../../components/ui/Spinner'
 import { Textarea } from '../../components/ui/Textarea'
 import { useToast } from '../../components/ui/useToast'
 import { usePageTitle } from '../../hooks/usePageTitle'
+import { DIFFICULTIES, EMPTY_VALUE } from '../../lib/format'
+import type { RecentChange } from '../../types/models'
 
 const SECTIONS = [
   { id: 'colors', title: 'Colors' },
@@ -52,6 +78,9 @@ const SECTIONS = [
   { id: 'states', title: 'Empty & error' },
   { id: 'pagination', title: 'Pagination' },
   { id: 'icons', title: 'Icons' },
+  { id: 'levels', title: 'Level pieces' },
+  { id: 'people', title: 'Player pieces' },
+  { id: 'feed', title: 'Stats & changes' },
 ] as const
 
 type SectionId = (typeof SECTIONS)[number]['id']
@@ -109,6 +138,147 @@ const ICONS: Array<{ name: string; Icon: ComponentType<IconProps> }> = [
   { name: 'IconArrowUp', Icon: IconArrowUp },
   { name: 'IconArrowDown', Icon: IconArrowDown },
   { name: 'IconHome', Icon: IconHome },
+  { name: 'IconTrophy', Icon: IconTrophy },
+  { name: 'IconPlus', Icon: IconPlus },
+  { name: 'IconUsers', Icon: IconUsers },
+  { name: 'IconStar', Icon: IconStar },
+  { name: 'IconPlay', Icon: IconPlay },
+  { name: 'IconCopy', Icon: IconCopy },
+]
+
+// Clearly fake sample data for the site pieces below (never real levels or players).
+const KIT_LEVELS: LevelCardLevel[] = [
+  {
+    id: 'kit-level-1',
+    name: 'Sample Level 1',
+    slug: 'sample-level-1',
+    position: 1,
+    creator: 'Creator Alpha',
+    difficulty: 'extreme_demon',
+    section: 'main',
+    points: 250,
+    victor_count: 3,
+    avg_enjoyment: 8.25,
+    thumbnail_path: null,
+    showcase_video_url: null,
+    first_victor_video_url: null,
+  },
+  {
+    id: 'kit-level-2',
+    name: 'Sample Level With A Much Longer Name To Check Wrapping',
+    slug: 'sample-level-2',
+    position: 14,
+    creator: null,
+    difficulty: 'insane_demon',
+    section: 'main',
+    points: 131.4,
+    victor_count: 1,
+    avg_enjoyment: null,
+    thumbnail_path: null,
+    showcase_video_url: null,
+    first_victor_video_url: null,
+  },
+  {
+    id: 'kit-level-3',
+    name: 'Sample Level 3',
+    slug: 'sample-level-3',
+    position: 76,
+    creator: 'Creator Gamma',
+    difficulty: 'harder',
+    section: 'legacy',
+    points: 0,
+    victor_count: 0,
+    avg_enjoyment: 5,
+    thumbnail_path: null,
+    showcase_video_url: null,
+    first_victor_video_url: null,
+  },
+]
+
+const KIT_PLAYERS = [
+  { id: 'kit-player-1', name: 'Player Alpha', slug: 'player-alpha', country_code: 'US' },
+  { id: 'kit-player-2', name: 'Player Beta', slug: 'player-beta', country_code: 'se' },
+  { id: 'kit-player-3', name: 'Player Gamma', slug: 'player-gamma', country_code: null },
+  { id: 'kit-player-4', name: 'xX_sample_Xx', slug: 'xx-sample-xx', country_code: 'GB' },
+] as const
+
+const KIT_LEVEL_FIELDS = {
+  level_id: 'kit-level-1',
+  level_name: 'Sample Level 1',
+  level_slug: 'sample-level-1',
+} as const
+
+const KIT_CHANGES: RecentChange[] = [
+  {
+    ...KIT_LEVEL_FIELDS,
+    id: 'kit-change-1',
+    kind: 'record',
+    happened_at: '2026-10-08T12:00:00+00:00',
+    event_date: '2026-10-08',
+    player_id: 'kit-player-1',
+    player_name: 'Player Alpha',
+    player_slug: 'player-alpha',
+    attempts: 12000,
+    video_url: 'https://medal.tv/games/geometry-dash/clips/sample',
+    old_position: null,
+    new_position: null,
+  },
+  {
+    ...KIT_LEVEL_FIELDS,
+    id: 'kit-change-2',
+    kind: 'record',
+    happened_at: '2026-10-07T12:00:00+00:00',
+    event_date: '2026-10-07',
+    player_id: 'kit-player-2',
+    player_name: 'Player Beta',
+    player_slug: 'player-beta',
+    attempts: null,
+    video_url: null,
+    old_position: null,
+    new_position: null,
+  },
+  {
+    ...KIT_LEVEL_FIELDS,
+    id: 'kit-change-3',
+    kind: 'level_added',
+    happened_at: '2026-10-06T12:00:00+00:00',
+    event_date: '2026-10-06',
+    player_id: null,
+    player_name: null,
+    player_slug: null,
+    attempts: null,
+    video_url: null,
+    old_position: null,
+    new_position: 7,
+  },
+  {
+    ...KIT_LEVEL_FIELDS,
+    id: 'kit-change-4',
+    kind: 'level_moved',
+    happened_at: '2026-10-05T12:00:00+00:00',
+    event_date: '2026-10-05',
+    player_id: null,
+    player_name: null,
+    player_slug: null,
+    attempts: null,
+    video_url: null,
+    old_position: 9,
+    new_position: 4,
+  },
+  {
+    ...KIT_LEVEL_FIELDS,
+    id: 'kit-change-5',
+    kind: 'level_moved',
+    happened_at: '2026-10-04T12:00:00+00:00',
+    event_date: '2026-10-04',
+    player_id: null,
+    player_name: null,
+    player_slug: null,
+    attempts: null,
+    video_url: null,
+    old_position: 2,
+    new_position: 3,
+  },
 ]
 
 /** Developer-only gallery of every UI building block (route /dev/ui, not in production). */
@@ -149,6 +319,9 @@ export function UiKitPage() {
         <StatesSection />
         <PaginationSection />
         <IconsSection />
+        <LevelPiecesSection />
+        <PlayerPiecesSection />
+        <FeedSection />
       </div>
     </PageShell>
   )
@@ -634,6 +807,140 @@ function IconsSection() {
           </li>
         ))}
       </ul>
+    </KitSection>
+  )
+}
+
+function LevelPiecesSection() {
+  return (
+    <KitSection
+      id="levels"
+      description="src/components/level. Placeholder thumbnails are drawn per level (no image needed)."
+    >
+      <KitGroup label="Difficulty badges (demons: red spikes; others: round marks)">
+        <div className="flex flex-wrap items-center gap-2">
+          {DIFFICULTIES.map((difficulty) => (
+            <DifficultyBadge key={difficulty} difficulty={difficulty} />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <DifficultyBadge difficulty="extreme_demon" size="md" />
+          <DifficultyBadge difficulty="hard" size="md" />
+          <DifficultyBadge difficulty="insane_demon" hideLabel />
+        </div>
+      </KitGroup>
+      <KitGroup label="Section badges">
+        <div className="flex flex-wrap items-center gap-2">
+          <SectionBadge section="main" />
+          <SectionBadge section="extended" />
+          <SectionBadge section="legacy" />
+          <SectionBadge section="main" size="md" />
+        </div>
+      </KitGroup>
+      <KitGroup label="Thumbnails (placeholders)">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {KIT_LEVELS.map((level) => (
+            <LevelThumbnail key={level.id} level={level} className="w-full" />
+          ))}
+          <LevelThumbnail level={{ ...KIT_LEVELS[0]!, id: 'kit-level-x' }} className="w-full" />
+        </div>
+      </KitGroup>
+      <KitGroup label="Level cards + skeleton">
+        <ol className="space-y-3">
+          {KIT_LEVELS.map((level) => (
+            <LevelCard key={level.id} level={level} titleAs="h3" />
+          ))}
+          <LevelCard level={KIT_LEVELS[0]!} titleAs="h3" showSection />
+          <LevelCardSkeleton />
+        </ol>
+      </KitGroup>
+      <KitGroup label="Video (non-YouTube link; YouTube links become an embedded player)">
+        <VideoEmbed
+          url="https://medal.tv/games/geometry-dash/clips/sample"
+          title="Sample Level 1 — showcase video"
+        />
+      </KitGroup>
+    </KitSection>
+  )
+}
+
+function PlayerPiecesSection() {
+  return (
+    <KitSection id="people" description="src/components/player">
+      <KitGroup label="Avatars (initials when there is no picture)">
+        <div className="flex flex-wrap items-end gap-3">
+          {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map((size, i) => (
+            <PlayerAvatar key={size} player={KIT_PLAYERS[i % KIT_PLAYERS.length]!} size={size} />
+          ))}
+        </div>
+      </KitGroup>
+      <KitGroup label="Flags">
+        <div className="flex flex-wrap items-center gap-3 text-2xl">
+          {['US', 'SE', 'GB', 'JP', 'BR', 'DE'].map((code) => (
+            <CountryFlag key={code} code={code} />
+          ))}
+        </div>
+      </KitGroup>
+      <KitGroup label="Player links">
+        <ul className="flex flex-wrap gap-x-6 gap-y-1">
+          {KIT_PLAYERS.map((player) => (
+            <li key={player.id}>
+              <PlayerLink player={player} />
+            </li>
+          ))}
+        </ul>
+      </KitGroup>
+    </KitSection>
+  )
+}
+
+function FeedSection() {
+  return (
+    <KitSection
+      id="feed"
+      description="src/components/shared. The three boxes load real data (the same ones the home page and list sidebar use)."
+    >
+      <KitGroup label="Stat grid">
+        <StatGrid label="Sample stats">
+          <StatTile label="Points" value="250.00" icon={<IconStar />} />
+          <StatTile label="Victors" value="3" hint="of 6 players" icon={<IconUsers />} />
+          <StatTile label="First victor" value="Player Alpha" mono={false} />
+          <StatTile
+            label="GD level ID"
+            value="1000001"
+            action={
+              <Button size="sm" variant="ghost" iconOnly aria-label="Copy level ID">
+                <IconCopy />
+              </Button>
+            }
+          />
+        </StatGrid>
+        <div className="mt-3">
+          <StatGrid columns={3} label="Sample totals">
+            <StatTile size="lg" label="Levels" value="12" />
+            <StatTile size="lg" label="Records" value="26" />
+            <StatTile size="lg" label="Avg enjoyment" value={EMPTY_VALUE} />
+          </StatGrid>
+        </div>
+        <div className="mt-3">
+          <StatGridSkeleton count={4} />
+        </div>
+      </KitGroup>
+      <KitGroup label="Recent change lines">
+        <ol className="divide-y divide-border rounded-xl border border-border bg-surface-2/40 px-4">
+          {KIT_CHANGES.map((change) => (
+            <RecentChangeItem key={change.id} change={change} showDate className="py-3" />
+          ))}
+          <RecentChangeItemSkeleton showDate className="py-3" />
+        </ol>
+      </KitGroup>
+      <KitGroup label="Boxes (live data)">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <RecentChangesBox />
+          <TopPlayersBox />
+          <LatestRecordsBox />
+        </div>
+      </KitGroup>
     </KitSection>
   )
 }

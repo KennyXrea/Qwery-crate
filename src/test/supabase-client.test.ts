@@ -7,6 +7,9 @@ const createClient = vi.hoisted(() =>
   })),
 )
 
+// src/test/setup.ts swaps src/lib/supabase for an offline stand-in in every test; this test is
+// about the real module, so it asks for it back.
+vi.unmock('../lib/supabase')
 vi.mock('@supabase/supabase-js', () => ({ createClient }))
 vi.mock('../lib/env', () => ({
   getEnv: () => ({

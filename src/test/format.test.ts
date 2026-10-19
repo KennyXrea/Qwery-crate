@@ -4,11 +4,13 @@ import {
   EMPTY_VALUE,
   difficultyLabel,
   formatAverage,
+  formatCount,
   formatDate,
   formatDateTime,
   formatDuration,
   formatNumber,
   formatPoints,
+  initialsOf,
   isDemon,
   isDifficulty,
 } from '../lib/format'
@@ -390,5 +392,38 @@ describe('difficulties', () => {
     expect(isDifficulty('')).toBe(false)
     expect(isDifficulty(null)).toBe(false)
     expect(isDifficulty(3)).toBe(false)
+  })
+})
+
+describe('formatCount', () => {
+  it('uses the singular only for exactly 1', () => {
+    expect(formatCount(1, 'victor')).toBe('1 victor')
+    expect(formatCount(0, 'victor')).toBe('0 victors')
+    expect(formatCount(12000, 'attempt')).toBe('12,000 attempts')
+    expect(formatCount('3', 'completion')).toBe('3 completions')
+    expect(formatCount(2, 'entry', 'entries')).toBe('2 entries')
+  })
+
+  it('shows a dash for missing counts', () => {
+    expect(formatCount(null, 'attempt')).toBe(EMPTY_VALUE)
+    expect(formatCount(undefined, 'attempt')).toBe(EMPTY_VALUE)
+    expect(formatCount('lots', 'attempt')).toBe(EMPTY_VALUE)
+  })
+})
+
+describe('initialsOf', () => {
+  it.each([
+    ['Player Alpha', 'PA'],
+    ['zoink', 'Z'],
+    ['Sample Level 12', 'S1'],
+    ['xX_dash-master_Xx', 'XX'],
+    ['  élan   vital ', 'ÉV'],
+    ['🙂 smile', 'S'],
+    ['', '?'],
+    ['   ', '?'],
+    [null, '?'],
+    ['!!! ???', '?'],
+  ])('%j → %j', (name, expected) => {
+    expect(initialsOf(name)).toBe(expected)
   })
 })

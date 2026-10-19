@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UNEXPECTED_DATA_CODE } from '../api/errors'
 import { getPlayerBySlug, getPlayerRecords, getPlayers, isPlayerRecordSort } from '../api/players'
 import { getRecentRecords } from '../api/records'
-import { PLAYER_ID, playerRow, postgrestError, recordRow } from './api-fixtures'
+import {
+  PLAYER_ID,
+  playerRow,
+  postgrestError,
+  recentLevelRow,
+  recentRecordRow,
+  recordRow,
+} from './api-fixtures'
 import { callsOf, fakeSupabase, methodsOf } from './fake-supabase'
 
 vi.mock('../lib/supabase', async () => {
@@ -126,18 +133,35 @@ describe('getPlayerRecords', () => {
 })
 
 describe('getRecentRecords', () => {
-  it('reads the latest completions: date beaten desc (undated last), created_at, id', async () => {
-    fakeSupabase.queue({ data: [recordRow()] })
+  it('reads completions from the Recent changes feed in its order (undated ones by entry day)', async () => {
+    fakeSupabase.queue({
+      data: [recentRecordRow(), recentRecordRow({ attempts: null, video_url: null })],
+    })
     const records = await getRecentRecords(5)
     const query = fakeSupabase.onlyQuery()
-    expect(query.target).toBe('records_view')
+    expect(query.target).toBe('recent_changes_view')
+    expect(callsOf(query, 'select')).toEqual([['*']])
+    expect(callsOf(query, 'eq')).toEqual([['kind', 'record']])
     expect(callsOf(query, 'order')).toEqual([
-      ['date_beaten', { ascending: false, nullsFirst: false }],
-      ['created_at', { ascending: false }],
-      ['id', { ascending: false }],
+      ['event_date', { ascending: false }],
+      ['happened_at', { ascending: false }],
+      ['id', { ascending: true }],
     ])
     expect(callsOf(query, 'limit')).toEqual([[5]])
-    expect(records).toHaveLength(1)
+    expect(records).toHaveLength(2)
+    expect(records[0]).toMatchObject({
+      kind: 'record',
+      player_name: 'Player Alpha',
+      level_slug: 'sample-level-1',
+      attempts: 12000,
+      event_date: '2026-01-05',
+    })
+    expect(records[1]).toMatchObject({ attempts: null, video_url: null })
+  })
+
+  it('refuses a row that is not a completion', async () => {
+    fakeSupabase.queue({ data: [recentLevelRow()] })
+    await expect(getRecentRecords()).rejects.toMatchObject({ code: UNEXPECTED_DATA_CODE })
   })
 
   it.each([

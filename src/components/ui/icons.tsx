@@ -178,3 +178,65 @@ export function IconHome(props: IconProps) {
     </SvgIcon>
   )
 }
+
+/** A completion ("beat the level"). */
+export function IconTrophy(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M17 6h2.5a1.5 1.5 0 0 1 1.5 1.5A3.5 3.5 0 0 1 17.5 11H17" />
+      <path d="M7 6H4.5A1.5 1.5 0 0 0 3 7.5 3.5 3.5 0 0 0 6.5 11H7" />
+    </SvgIcon>
+  )
+}
+
+export function IconPlus(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </SvgIcon>
+  )
+}
+
+/** Players / victors. */
+export function IconUsers(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+      <path d="M18.5 14.3A6.5 6.5 0 0 1 21.5 20" />
+    </SvgIcon>
+  )
+}
+
+/** Enjoyment ratings. */
+export function IconStar(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" />
+    </SvgIcon>
+  )
+}
+
+/** A video. */
+export function IconPlay(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="3" />
+      <path d="m10 9 5 3-5 3V9Z" />
+    </SvgIcon>
+  )
+}
+
+export function IconCopy(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="8" y="8" width="13" height="13" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </SvgIcon>
+  )
+}

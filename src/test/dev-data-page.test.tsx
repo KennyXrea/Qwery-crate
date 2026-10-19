@@ -17,6 +17,7 @@ import {
   toPlayer,
   toPositionHistoryEntry,
   toRecentChange,
+  toRecentRecordChange,
   toSearchResult,
 } from '../api/mappers'
 import { getPlayerBySlug, getPlayerRecords, getPlayers } from '../api/players'
@@ -124,7 +125,7 @@ beforeEach(() => {
     rows: [toRecentChange(recentRecordRow())],
     total: 1,
   })
-  vi.mocked(getRecentRecords).mockResolvedValue([RECORD])
+  vi.mocked(getRecentRecords).mockResolvedValue([toRecentRecordChange(recentRecordRow())])
   vi.mocked(getSiteStats).mockResolvedValue(STATS)
   vi.mocked(searchSite).mockResolvedValue([toSearchResult(searchRow())])
 })

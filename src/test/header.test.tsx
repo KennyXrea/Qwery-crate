@@ -1,23 +1,16 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { createMemoryRouter } from 'react-router'
-import { RouterProvider } from 'react-router/dom'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { Header } from '../components/layout/Header'
-import { ToastProvider } from '../components/ui/ToastProvider'
-import { routes } from '../routes'
+import { mockApiDefaults } from './api-mocks'
+import { renderApp, renderWithProviders } from './render'
 
-beforeAll(() => {
-  // jsdom doesn't implement scrolling; ScrollRestoration calls it on navigation.
-  Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true, configurable: true })
+// The whole app with the fake dataset from api-mocks.ts (no network).
+beforeEach(() => {
+  mockApiDefaults()
 })
 
 async function renderAt(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] })
-  render(
-    <ToastProvider>
-      <RouterProvider router={router} />
-    </ToastProvider>,
-  )
+  const { router } = renderApp(path)
   await screen.findByRole('banner')
   return router
 }
@@ -52,7 +45,7 @@ describe('search shortcut', () => {
     pressSlash()
 
     const dialog = await screen.findByRole('dialog', { name: 'Search' })
-    const input = within(dialog).getByRole('searchbox', { name: 'Search levels and players' })
+    const input = within(dialog).getByRole('combobox', { name: 'Search levels and players' })
     expect(input).toHaveFocus()
 
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
@@ -76,7 +69,7 @@ describe('search shortcut', () => {
     await renderAt('/')
 
     pressSlash()
-    const input = await screen.findByRole('searchbox')
+    const input = await screen.findByRole('combobox')
     // Typing "/" in the search field itself must reach the field.
     expect(pressSlash(input)).toBe(true)
     // Focus left the dialog (e.g. a dismissed toast): still no second dialog.
@@ -86,22 +79,12 @@ describe('search shortcut', () => {
   })
 
   it('lets "/" be typed into text fields instead of opening search', async () => {
-    const router = createMemoryRouter([
-      {
-        path: '/',
-        element: (
-          <>
-            <Header />
-            <input aria-label="URL" />
-            <textarea aria-label="Notes" />
-          </>
-        ),
-      },
-    ])
-    render(
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>,
+    renderWithProviders(
+      <>
+        <Header />
+        <input aria-label="URL" />
+        <textarea aria-label="Notes" />
+      </>,
     )
 
     for (const field of [
@@ -190,7 +173,9 @@ describe('mobile menu', () => {
     act(() => menuButton.focus())
     expect(menuButton).toHaveAttribute('aria-expanded', 'true')
 
-    act(() => screen.getByRole('link', { name: 'Sample Level 1' }).focus())
+    // Any link on the page outside the header (the level can be linked more than once).
+    const [levelLink] = await screen.findAllByRole('link', { name: 'Sample Level 1' })
+    act(() => levelLink?.focus())
     expect(menuButton).toHaveAttribute('aria-expanded', 'false')
   })
 

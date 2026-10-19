@@ -10,7 +10,7 @@ import {
   getLevelRecords,
   getLevels,
 } from '../api/levels'
-import { toCompletion, toLevel, toSearchResult } from '../api/mappers'
+import { toCompletion, toLevel, toRecentRecordChange, toSearchResult } from '../api/mappers'
 import { getPlayerRecords } from '../api/players'
 import { getRecentChanges } from '../api/recent'
 import { getRecentRecords } from '../api/records'
@@ -25,7 +25,15 @@ import { useSearch } from '../hooks/useSearch'
 import { usePointsSettings, useSettings } from '../hooks/useSettings'
 import { DEFAULT_POINTS_SETTINGS } from '../lib/points'
 import type { Completion, Level, Page, SiteSettings } from '../types/models'
-import { LEVEL_ID, OTHER_LEVEL_ID, PLAYER_ID, levelRow, recordRow, searchRow } from './api-fixtures'
+import {
+  LEVEL_ID,
+  OTHER_LEVEL_ID,
+  PLAYER_ID,
+  levelRow,
+  recentRecordRow,
+  recordRow,
+  searchRow,
+} from './api-fixtures'
 
 // No network: the API functions the hooks call are replaced with mocks (the rest of each
 // module, e.g. LEVEL_SORTS, stays real). The real modules still import the Supabase client,
@@ -68,6 +76,7 @@ const OTHER_LEVEL: Level = toLevel(
   levelRow({ id: OTHER_LEVEL_ID, position: 2, name: 'Sample Level 2', slug: 'sample-level-2' }),
 )
 const RECORD: Completion = toCompletion(recordRow())
+const RECENT_RECORD = toRecentRecordChange(recentRecordRow())
 const RESULTS = [toSearchResult(searchRow())]
 const OTHER_PLAYER_ID = '66666666-6666-4666-8666-666666666666'
 const SIGNAL = { signal: expect.any(AbortSignal) as AbortSignal }
@@ -395,7 +404,7 @@ describe('feeds', () => {
   })
 
   it('useRecentRecords asks for 5 by default and never more than 50', async () => {
-    vi.mocked(getRecentRecords).mockResolvedValue([RECORD])
+    vi.mocked(getRecentRecords).mockResolvedValue([RECENT_RECORD])
 
     const { result } = renderHook(() => [useRecentRecords(), useRecentRecords(500)], { wrapper })
 

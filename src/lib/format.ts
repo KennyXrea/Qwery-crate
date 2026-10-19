@@ -205,3 +205,32 @@ export function difficultyLabel(difficulty: GdDifficulty | null | undefined): st
 export function isDemon(difficulty: GdDifficulty | null | undefined): boolean {
   return isDifficulty(difficulty) && difficulty.endsWith('_demon')
 }
+
+/**
+ * A count with its noun, singular or plural: (1, 'victor') → "1 victor",
+ * (12000, 'attempt') → "12,000 attempts", (2, 'entry', 'entries') → "2 entries".
+ * Missing or unreadable counts → "—".
+ */
+export function formatCount(
+  count: number | string | null | undefined,
+  singular: string,
+  plural = `${singular}s`,
+): string {
+  const value = parseNumeric(count)
+  if (value === null) return EMPTY_VALUE
+  return `${formatNumber(value)} ${value === 1 ? singular : plural}`
+}
+
+/**
+ * Up to two initials for an avatar or placeholder: "Player Alpha" → "PA", "zoink" → "Z",
+ * "xX_dash-master_Xx" → "XX", "Élan vital" → "ÉV", "  " → "?". Words without any letter or
+ * digit (emoji, punctuation) are skipped.
+ */
+export function initialsOf(name: string | null | undefined): string {
+  const words = (name ?? '').split(/[\s_\-.]+/u).filter((word) => /[\p{L}\p{N}]/u.test(word))
+  if (words.length === 0) return '?'
+  const first = (word: string) => Array.from(word.replace(/^[^\p{L}\p{N}]+/u, ''))[0] ?? ''
+  const letters =
+    words.length === 1 ? first(words[0] ?? '') : first(words[0] ?? '') + first(words.at(-1) ?? '')
+  return letters.toUpperCase() || '?'
+}
